@@ -26,10 +26,12 @@ readonly _ERR_PROGRAMMING=255
 
 readonly _USAGE="
   Usage:
-    $_SCRIPT_NAME <options> [shell]
+    $_SCRIPT_NAME <options> [shell] [dir]
 
   ARGUMENTS:
     template        The template to use (default: 'default')
+    dir             The target directory where the template will be installed
+                    (default: '.')
 
   OPTIONS:
     -h, --help      Show this help message.
@@ -53,8 +55,9 @@ done
 # --- main program -------------------------------------------------------------
 
 template="${1:-}"
+dir="${2:-.}"
 
-nix flake new -t "github:x3rAx/flakify#${template}" .
+nix flake new -t "github:x3rAx/flakify#${template}" "${dir}"
 
 echo >&2 ''
 echo >&2 ''
