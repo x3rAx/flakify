@@ -1,7 +1,59 @@
 #!/usr/bin/env bash
-set -euo pipefail
+
+# More safety by turning bugs into errors.
+# Use `${PIPESTATUS[n]}` to check for the `n`-th pipe command's exit status.
+# Make sure there are no uninitialized variables.
+# To allow a non-zero exit status or to allow a pipe to fail without exiting
+# the script, prefix the command with `!`.
+# Option `noclobber` makes sure piping into a file with `>` does not
+# override existing files. Use `>|` to overwrite files instead.
+# Environment variables are `UPPER_SNAKE_CASE`, global constants are
+# `_UNDERSCORE_PREFIXED` and global variables are `_underscore_prefixed`
+set -o errexit -o pipefail -o nounset -o noclobber
+IFS=$'\n\t' # Split on newlines and tabs (but not on spaces)
+
+: ${XDG_CONFIG_HOME:=$HOME/.config}
+: ${XDG_CACHE_HOME:=$HOME/.cache}
+
+readonly _SCRIPT="$(realpath "$0")"
+readonly _SCRIPT_NAME="${_SCRIPT##*/}"
+readonly _SCRIPT_DIR="${_SCRIPT%/*}"
+
+err() { echo >&2 "${_SCRIPT_NAME}: $@"; }
+
+readonly _ERR_USAGE=2
+readonly _ERR_PROGRAMMING=255
+
+readonly _USAGE="
+  Usage:
+    $_SCRIPT_NAME <options> [shell]
+
+  ARGUMENTS:
+    template        The template to use (default: 'default')
+
+  OPTIONS:
+    -h, --help      Show this help message.
+"
+
+readonly _OPTIONS='h'
+readonly _LONGOPTS='help'
+
+parsed="$(getopt -o "$_OPTIONS" -l "$_LONGOPTS" -n "$_SCRIPT_NAME" -- "$@")"
+if [[ ${PIPESTATUS[0]} -ne 0 ]]; then echo >&2 "$_USAGE"; exit $_ERR_USAGE; fi
+eval set -- "${parsed[@]}"; unset parsed
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)      echo "$_USAGE"; exit; ;;
+        --)             shift; break; ;;
+        *)              err "Programming error"; exit $_ERR_PROGRAMMING; ;;
+    esac
+done
+
+# --- main program -------------------------------------------------------------
 
 template="${1:-}"
+
 nix flake new -t "github:x3rAx/flakify#${template}" .
 
 echo >&2 ''
