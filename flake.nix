@@ -29,10 +29,16 @@
           self',
           ...
         }: {
+          packages = {
+            default = config.packages.flakify;
+            flakify = pkgs.callPackage ./default.nix {};
+          };
+
           devShells.default = pkgs.callPackage ./shell.nix {};
         };
 
         flake = {
+          overlays.default = final: _prev: {flakify = final.callPackage ./default.nix {};};
           templates = {
             rust = {
               path = ./templates/rust;

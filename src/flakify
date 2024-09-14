@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+template="${1:-}"
+nix flake new -t "github:x3rAx/flakify#${template}" .
+
+echo >&2 ''
+echo >&2 ''
+echo >&2 '    Run: `direnv allow` to enable the dev shell'
+echo >&2 ''
