@@ -61,9 +61,18 @@ done
 template="${1:-}"
 dir="${2:-.}"
 
-if [[ -z $template ]] || [[ $_list == true ]]; then
+list_templates() {
     echo ''
     nix flake show . --all-systems --json | jq -r '.templates | to_entries[] | "\(.key)\n    \(.value.description)\n"'
+}
+
+if [[ -z $template ]]; then
+    list_templates
+    exit 1
+fi
+
+if [[ $_list == true ]]; then
+    list_templates
     exit
 fi
 
