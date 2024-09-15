@@ -35,18 +35,22 @@ readonly _USAGE="
 
   OPTIONS:
     -h, --help      Show this help message.
+    -l, --list      List all available templates
 "
 
-readonly _OPTIONS='h'
-readonly _LONGOPTS='help'
+readonly _OPTIONS='hl'
+readonly _LONGOPTS='help,list'
 
 parsed="$(getopt -o "$_OPTIONS" -l "$_LONGOPTS" -n "$_SCRIPT_NAME" -- "$@")"
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then echo >&2 "$_USAGE"; exit $_ERR_USAGE; fi
 eval set -- "${parsed[@]}"; unset parsed
 
+_list=false
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)      echo "$_USAGE"; exit; ;;
+        -l|--list)      _list=true; shift; ;;
         --)             shift; break; ;;
         *)              err "Programming error"; exit $_ERR_PROGRAMMING; ;;
     esac
@@ -56,6 +60,12 @@ done
 
 template="${1:-}"
 dir="${2:-.}"
+
+if [[ -z $template ]] || [[ $_list == true ]]; then
+    echo ''
+    nix flake show . --all-systems --json | jq -r '.templates | to_entries[] | "\(.key)\n    \(.value.description)\n"'
+    exit
+fi
 
 nix flake new -t "github:x3rAx/flakify#${template}" "${dir}"
 
