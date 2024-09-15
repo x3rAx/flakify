@@ -58,12 +58,14 @@ done
 
 # --- main program -------------------------------------------------------------
 
+_FLAKE='github:x3rAx/flakify'
+
 template="${1:-}"
 dir="${2:-.}"
 
 list_templates() {
     echo ''
-    nix flake show . --all-systems --json | jq -r '.templates | to_entries[] | "\(.key)\n    \(.value.description)\n"'
+    nix flake show "$_FLAKE" --all-systems --json | jq -r '.templates | to_entries[] | "\(.key)\n    \(.value.description)\n"'
 }
 
 if [[ -z $template ]]; then
@@ -76,7 +78,7 @@ if [[ $_list == true ]]; then
     exit
 fi
 
-nix flake new -t "github:x3rAx/flakify#${template}" "${dir}"
+nix flake new -t "${_FLAKE}#${template}" "${dir}"
 
 echo >&2 ''
 echo >&2 ''
