@@ -39,12 +39,20 @@
 
         flake = {
           overlays.default = final: _prev: {flakify = final.callPackage ./default.nix {};};
-          templates = {
-            rust = {
-              path = ./templates/rust;
-              description = "nix flake new -t github:x3rAx/flakify#rust .";
-            };
-          };
+
+          templates = let
+            mkTemplates = builtins.foldl' (collect: name:
+              collect
+              // {
+                "${name}" = {
+                  path = ./templates + "/${name}";
+                  description = "nix flake new -t github:x3rAx/flakify#${name} .";
+                };
+              }) {};
+          in
+            mkTemplates [
+              "rust"
+            ];
         };
       }
     );
