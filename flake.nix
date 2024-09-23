@@ -52,6 +52,7 @@
           in
             mkTemplates [
               "rust"
+              "node"
             ];
         };
       }
