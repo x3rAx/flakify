@@ -36,21 +36,24 @@ readonly _USAGE="
   OPTIONS:
     -h, --help      Show this help message.
     -l, --list      List all available templates
+    -r, --refresh   Refresh the list of templates from the flakify repository
 "
 
-readonly _OPTIONS='hl'
-readonly _LONGOPTS='help,list'
+readonly _OPTIONS='hlr'
+readonly _LONGOPTS='help,list,refresh'
 
 parsed="$(getopt -o "$_OPTIONS" -l "$_LONGOPTS" -n "$_SCRIPT_NAME" -- "$@")"
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then echo >&2 "$_USAGE"; exit $_ERR_USAGE; fi
 eval set -- "${parsed[@]}"; unset parsed
 
 _list=false
+_refresh=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)      echo "$_USAGE"; exit; ;;
         -l|--list)      _list=true; shift; ;;
+        -r|--refresh)   _refresh=true; shift; ;;
         --)             shift; break; ;;
         *)              err "Programming error"; exit $_ERR_PROGRAMMING; ;;
     esac
@@ -63,9 +66,14 @@ _FLAKE='github:x3rAx/flakify'
 template="${1:-}"
 dir="${2:-.}"
 
+do_refresh=""
+if [[ $_refresh == true ]]; then
+    do_refresh="--refresh"
+fi
+
 list_templates() {
+    nix flake show $do_refresh "$_FLAKE" --all-systems --json | jq -r '.templates | to_entries[] | "\n\(.key)\n    \(.value.description)"'
     echo ''
-    nix flake show "$_FLAKE" --all-systems --json | jq -r '.templates | to_entries[] | "\(.key)\n    \(.value.description)\n"'
 }
 
 if [[ -z $template ]]; then
@@ -78,7 +86,7 @@ if [[ $_list == true ]]; then
     exit
 fi
 
-nix flake new -t "${_FLAKE}#${template}" "${dir}"
+nix flake new $do_refresh -t "${_FLAKE}#${template}" "${dir}"
 
 echo >&2 ''
 echo >&2 ''
