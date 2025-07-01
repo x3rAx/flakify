@@ -1,23 +1,42 @@
-{pkgs ? import <nixpkgs> {}}:
-pkgs.mkShell {
-  name = "nix-shell";
+let
+  inherit (builtins) currentSystem fromJSON readFile;
 
-  packages = with pkgs; [
-    bashInteractive
+  getFlake = name: let
+    flake = (fromJSON (readFile ./flake.lock)).nodes.${name}.locked;
+  in {
+    inherit (flake) rev;
+    outPath = fetchTarball {
+      url = "https://github.com/${flake.owner}/${flake.repo}/archive/${flake.rev}.tar.gz";
+      sha256 = flake.narHash;
+    };
+  };
+in
+  {
+    system ? currentSystem,
+    pkgs ? import (getFlake "nixpkgs") {localSystem = {inherit system;};},
+    fenix ? import (getFlake "fenix") {},
+    fenix-shell-profile ? fenix.stable,
+  }:
+    pkgs.mkShell {
+      name = "nix-shell";
 
-    (rust-bin.stable.latest.default.override {
-      extensions = [
-        "rust-src"
-        "rust-analyzer"
-        "clippy"
+      packages = with pkgs; [
+        bashInteractive
+
+        (fenix-shell-profile.withComponents [
+          "cargo"
+          "clippy"
+          "rust-analyzer"
+          "rust-src"
+          "rustfmt"
+        ])
+        bacon # CLI test runner
+        cargo-watch
+
+        #openssl.dev
+        #pkgconfig # Required to find openssl
+        #lldb # Install lldb with `lldb-dap` (aka `lldb-vscode`)
+
+        just # Command runner for `justfile`
       ];
-    })
-    bacon # CLI test runner
-    cargo-watch
-
-    #openssl.dev
-    #pkgconfig # Required to find openssl
-    #lldb # Install lldb with `lldb-dap` (aka `lldb-vscode`)
-  ];
-}
-
+    }

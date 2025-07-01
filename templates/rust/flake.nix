@@ -1,25 +1,63 @@
 {
-  description = "A Rust Flake";
+  description = "A Rust Flake (with fenix and Crane)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    rust-overlay.url = "github:oxalica/rust-overlay";
+
+    # Rust toolchains
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Library for building Cargo projects
+    crane.url = "github:ipetkov/crane";
   };
 
   outputs = {
     nixpkgs,
     flake-utils,
-    rust-overlay,
+    crane,
     ...
-  }:
+  } @ inputs:
     flake-utils.lib.eachDefaultSystem (
       system: let
-        overlays = [(import rust-overlay)];
-        pkgs = import nixpkgs {inherit system overlays;};
-      in {
-        devShells.default = import ./shell.nix {inherit pkgs;};
+        pkgs = nixpkgs.legacyPackages.${system};
+        fenix = inputs.fenix.packages.${system};
+
+        fenix-shell-profile = fenix.stable;
+        fenix-build-toolchain = fenix.stable.minimalToolchain;
+
+        craneLib = (crane.mkLib pkgs).overrideToolchain fenix-build-toolchain;
+
+        cleanCargoSource = src:
+          pkgs.lib.cleanSourceWith {
+            inherit src;
+            filter = path: type: let
+              isCargoSource = craneLib.filterCargoSources path type;
+              isPestFile = type == "regular" && (builtins.match ".*\.pest" path) != null;
+            in
+              isCargoSource || isPestFile;
+          };
+      in rec {
+        devShells = {
+          default = import ./shell.nix {
+            inherit pkgs;
+            inherit fenix;
+            inherit fenix-shell-profile;
+          };
+        };
+
+        packages = {
+          default = packages.my-app;
+          my-app = craneLib.buildPackage {src = cleanCargoSource ./.;};
+        };
+
+        overlays = {
+          default = overlays.my-app;
+          my-app = _final: _prev: {my-app = packages.my-app;};
+        };
       }
     );
 }
-
