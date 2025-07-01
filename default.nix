@@ -2,7 +2,7 @@
 
 pkgs.stdenv.mkDerivation rec {
   pname = "flakify";
-  version = "0.1.0";
+  version = "0.2.0";
 
   src = builtins.path {
     path = ./src;
