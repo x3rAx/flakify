@@ -41,12 +41,14 @@
           overlays.default = final: _prev: {flakify = final.callPackage ./default.nix {};};
 
           templates = let
-            mkTemplates = builtins.foldl' (collect: name:
+            mkTemplates = builtins.foldl' (collect: name: let
+              flake = import (./templates + "/${name}/flake.nix");
+            in
               collect
               // {
                 "${name}" = {
                   path = ./templates + "/${name}";
-                  description = "nix flake new -t github:x3rAx/flakify#${name} .";
+                  description = flake.description + "\n-> nix flake new -t github:x3rAx/flakify#${name} .";
                 };
               }) {};
             templateDirs = builtins.attrNames (lib.filterAttrs (name: type: type == "directory" && !lib.hasPrefix "." name) (builtins.readDir ./templates));
