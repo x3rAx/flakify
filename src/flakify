@@ -61,7 +61,8 @@ done
 
 # --- main program -------------------------------------------------------------
 
-_FLAKE='github:x3rAx/flakify'
+: ${FLAKIFY_FLAKE='github:x3rAx/flakify'}
+_FLAKE="${FLAKIFY_FLAKE}"
 
 template="${1:-}"
 dir="${2:-.}"
