@@ -49,11 +49,9 @@
                   description = "nix flake new -t github:x3rAx/flakify#${name} .";
                 };
               }) {};
+            templateDirs = builtins.attrNames (lib.filterAttrs (name: type: type == "directory" && !lib.hasPrefix "." name) (builtins.readDir ./templates));
           in
-            mkTemplates [
-              "rust"
-              "node"
-            ];
+            mkTemplates templateDirs;
         };
       }
     );
