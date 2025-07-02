@@ -92,7 +92,9 @@ fi
 
 nix flake new $do_refresh -t "${_FLAKE}#${template}" "${dir}"
 
-echo >&2 ''
-echo >&2 ''
-echo >&2 '    Run: `direnv allow` to enable the dev shell'
-echo >&2 ''
+if [[ -f .envrc ]]; then
+    echo >&2 ''
+    echo >&2 ''
+    echo >&2 '    Run: `direnv allow` to enable the dev shell'
+    echo >&2 ''
+fi
