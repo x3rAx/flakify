@@ -16,7 +16,7 @@ install-cargo-bump:
     cargo install cargo-bump
 
 
-# Bump version and run `cargo2nix`. Set `version` to `major`, `minor`, `patch` or a specific version string.
+# Bump version in `cargo.toml`. Set `version` to `major`, `minor`, `patch` or a specific version string.
 bump version: ensure-cargo-bump
     # Ensure cargo-bump is installed
     command -v cargo-bump >/dev/null 2>&1 || just install-cargo-bump;

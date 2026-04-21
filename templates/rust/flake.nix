@@ -3,7 +3,12 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    flake-compat = {
+      url = "github:NixOS/flake-compat";
+      flake = false;
+    };
 
     # Rust toolchains
     fenix = {
@@ -15,21 +20,22 @@
     crane.url = "github:ipetkov/crane";
   };
 
-  outputs = {
-    nixpkgs,
-    flake-utils,
-    crane,
-    ...
-  } @ inputs:
-    flake-utils.lib.eachDefaultSystem (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-        fenix = inputs.fenix.packages.${system};
+  outputs = inputs:
+    inputs.flake-parts.lib.mkFlake {inherit inputs;} {
+      systems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
+
+      perSystem = {
+        config,
+        inputs',
+        pkgs,
+        ...
+      }: let
+        fenix = inputs'.fenix.packages;
 
         fenix-shell-profile = fenix.stable;
         fenix-build-toolchain = fenix.stable.minimalToolchain;
 
-        craneLib = (crane.mkLib pkgs).overrideToolchain fenix-build-toolchain;
+        craneLib = (inputs.crane.mkLib pkgs).overrideToolchain fenix-build-toolchain;
 
         cleanCargoSource = src:
           pkgs.lib.cleanSourceWith {
@@ -40,24 +46,50 @@
             in
               isCargoSource || isPestFile;
           };
-      in rec {
-        devShells = {
-          default = import ./shell.nix {
-            inherit pkgs;
-            inherit fenix;
-            inherit fenix-shell-profile;
-          };
+      in {
+        devShells.default = pkgs.mkShell {
+          name = "nix-rust-shell";
+
+          packages = with pkgs; [
+            bashInteractive
+
+            (fenix-shell-profile.withComponents [
+              "cargo"
+              "clippy"
+              "rust-analyzer"
+              "rust-src"
+              "rustfmt"
+            ])
+
+            bacon # CLI test runner
+            cargo-watch
+
+            #openssl.dev
+            #pkgconfig # Required to find openssl
+            #lldb # Install lldb with `lldb-dap` (aka `lldb-vscode`)
+
+            just # Command runner for `justfile`
+          ];
+
+          shellHook = ''
+            # If OpenSSL can not be found, uncomment the following line
+            #export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [pkgs.openssl]}:$LD_LIBRARY_PATH"
+
+            echo "🦀 Rust development environment loaded"
+          '';
         };
 
         packages = {
-          default = packages.my-app;
+          default = config.packages.my-app;
           my-app = craneLib.buildPackage {src = cleanCargoSource ./.;};
         };
+      };
 
-        overlays = {
-          default = overlays.my-app;
-          my-app = _final: _prev: {my-app = packages.my-app;};
+      flake.overlays = {
+        default = inputs.self.overlays.my-app;
+        my-app = _final: prev: {
+          my-app = inputs.self.packages.${prev.system}.my-app;
         };
-      }
-    );
+      };
+    };
 }
