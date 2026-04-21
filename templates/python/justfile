@@ -1,0 +1,31 @@
+set positional-arguments
+
+
+[private]
+@list:
+    just --list
+
+
+# Initialize a new uv project
+init:
+    uv init
+
+
+# Install dependencies from pyproject.toml / uv.lock
+install:
+    uv sync
+
+
+# Add a dependency
+add *args:
+    uv add "$@"
+
+
+# Run a command inside the uv-managed environment
+run *args:
+    uv run "$@"
+
+
+# Run tests
+test:
+    uv run pytest
